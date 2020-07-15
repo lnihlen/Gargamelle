@@ -3,7 +3,7 @@ set(INSTALL_EXT "${PROJECT_BINARY_DIR}/install-ext" CACHE PATH "Gargamelle Exter
 file(MAKE_DIRECTORY "${INSTALL_EXT}")
 
 ### Wt
-ExternalProject_Add(Wt
+ExternalProject_Add(wt
     PREFIX ext
     STEP_TARGETS install
     EXCLUDE_FROM_ALL ON
@@ -13,4 +13,11 @@ ExternalProject_Add(Wt
     UPDATE_COMMAND ""
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${INSTALL_EXT}
 )
+
+### fmt
+add_subdirectory(fmt)
+
+### spdlog
+set(SPDLOG_FMT_EXTERNAL ON CACHE BOOL "require spdlog to use external fmt")
+add_subdirectory(spdlog)
 
