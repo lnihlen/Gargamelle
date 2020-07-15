@@ -1,32 +1,85 @@
-#include "spdlog/spdlog.h"
-#include "Wt/WResource.h"
-#include "Wt/WServer.h"
-#include "Wt/Http/Request.h"
-#include "Wt/Http/Response.h"
+// #include "spdlog/spdlog.h"
 
-class DumpUploadResource : public Wt::WResource {
+#include <folly/Memory.h>
+
+#include <proxygen/httpserver/HTTPServer.h>
+
+#include <proxygen/httpserver/ResponseBuilder.h>
+#include <proxygen/httpserver/RequestHandler.h>
+#include <proxygen/httpserver/RequestHandlerFactory.h>
+
+#include <vector>
+
+class DumpHandler : public proxygen::RequestHandler {
 public:
-    virtual void handleRequest(const Wt::Http::Request& request, Wt::Http::Response& response) override {
-        spdlog::info("got something!");
+    DumpHandler();
+
+    void onRequest(std::unique_ptr<proxygen::HTTPMessage> request) noexcept override {
     }
+
+    void onBody(std::unique_ptr<folly::IOBuf> body) noexcept override {
+        if (m_body) {
+            m_body->prependChain(std::move(m_body));
+        } else {
+            m_body = std::move(body);
+        }
+    }
+
+    void onEOM() noexcept override {
+        proxygen::ResponseBuilder(downstream_).status(200, "OK").sendWithEOM();
+    }
+
+    void onUpgrade(proxygen::UpgradeProtocol proto) noexcept override {
+    }
+
+    void requestComplete() noexcept override {
+        delete this;
+    }
+
+    void onError(proxygen::ProxygenError err) noexcept override {
+        delete this;
+    }
+
+private:
+    std::unique_ptr<folly::IOBuf> m_body;
+};
+
+class DumpHandlerFactory : public proxygen::RequestHandlerFactory {
+public:
+    void onServerStart(folly::EventBase* /* evb */) noexcept override {
+    }
+
+    void onServerStop() noexcept override {
+    }
+
+    proxygen::RequestHandler* onRequest(proxygen::RequestHandler*, proxygen::HTTPMessage*) noexcept override {
+        return new DumpHandler();
+    }
+
+private:
 };
 
 int main(int argc, char* argv[]) {
-    DumpUploadResource dumpUpload;
+    std::vector<proxygen::HTTPServer::IPConfig> IPs = {
+        { folly::SocketAddress("localhost", 8080, true), proxygen::HTTPServer::Protocol::HTTP }
+    };
 
-    try {
-        spdlog::info("Starting Server");
-        Wt::WServer server{argc, argv, WTHTTP_CONFIGURATION};
+    proxygen::HTTPServerOptions options;
+    options.threads = 4;
+    options.idleTimeout = std::chrono::milliseconds(60000);
+    options.shutdownOn = {SIGINT, SIGTERM};
+    options.enableContentCompression = false;
+    options.handlerFactories = proxygen::RequestHandlerChain().addThen<DumpHandlerFactory>().build();
+    // ?
+    // options.h2cEnabled = true;
 
-        server.addResource(&dumpUpload, "/dump");
-        server.run();
-    } catch (const Wt::WServer::Exception& e) {
-        spdlog::critical("Wt exception: {}", e.what());
-        return -1;
-    } catch (const std::exception& e) {
-        spdlog::critical("C++ exception: {}", e.what());
-        return -1;
-    }
+    proxygen::HTTPServer server(std::move(options));
+    server.bind(IPs);
 
+    std::thread t([&] () {
+        server.start();
+    });
+
+    t.join();
     return 0;
 }
