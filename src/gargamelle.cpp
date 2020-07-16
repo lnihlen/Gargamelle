@@ -1,20 +1,20 @@
-// #include "spdlog/spdlog.h"
-
 #include <folly/Memory.h>
+#include <folly/io/async/EventBaseManager.h>
+#include <folly/portability/GFlags.h>
+#include <folly/portability/Unistd.h>
 
 #include <proxygen/httpserver/HTTPServer.h>
-
 #include <proxygen/httpserver/ResponseBuilder.h>
 #include <proxygen/httpserver/RequestHandler.h>
 #include <proxygen/httpserver/RequestHandlerFactory.h>
 
-#include <vector>
+namespace dump {
 
 class DumpHandler : public proxygen::RequestHandler {
 public:
-    DumpHandler();
+    DumpHandler() {}
 
-    void onRequest(std::unique_ptr<proxygen::HTTPMessage> request) noexcept override {
+    void onRequest(std::unique_ptr<proxygen::HTTPMessage> /* request*/) noexcept override {
     }
 
     void onBody(std::unique_ptr<folly::IOBuf> body) noexcept override {
@@ -26,6 +26,7 @@ public:
     }
 
     void onEOM() noexcept override {
+        LOG(INFO) << "got to EOM";
         proxygen::ResponseBuilder(downstream_).status(200, "OK").sendWithEOM();
     }
 
@@ -37,12 +38,15 @@ public:
     }
 
     void onError(proxygen::ProxygenError err) noexcept override {
+        LOG(ERROR) << "dumphandler got error";
         delete this;
     }
 
 private:
     std::unique_ptr<folly::IOBuf> m_body;
 };
+
+} // namespace dump
 
 class DumpHandlerFactory : public proxygen::RequestHandlerFactory {
 public:
@@ -53,15 +57,19 @@ public:
     }
 
     proxygen::RequestHandler* onRequest(proxygen::RequestHandler*, proxygen::HTTPMessage*) noexcept override {
-        return new DumpHandler();
+        return new dump::DumpHandler();
     }
 
 private:
 };
 
 int main(int argc, char* argv[]) {
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
+    google::InitGoogleLogging(argv[0]);
+    google::InstallFailureSignalHandler();
+
     std::vector<proxygen::HTTPServer::IPConfig> IPs = {
-        { folly::SocketAddress("localhost", 8080, true), proxygen::HTTPServer::Protocol::HTTP }
+        { folly::SocketAddress("127.0.0.1", 8080, true), proxygen::HTTPServer::Protocol::HTTP }
     };
 
     proxygen::HTTPServerOptions options;
@@ -77,6 +85,7 @@ int main(int argc, char* argv[]) {
     server.bind(IPs);
 
     std::thread t([&] () {
+            LOG(INFO) << "starting server.";
         server.start();
     });
 
