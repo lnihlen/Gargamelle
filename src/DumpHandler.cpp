@@ -11,7 +11,7 @@
 
 namespace garg { namespace handler {
 
-DumpHandler::DumpHandler(): m_valid(false), m_dumpFile(-1) {}
+DumpHandler::DumpHandler(const std::string& dumpPath): m_valid(false), m_dumpPath(dumpPath), m_dumpFile(-1) {}
 
 void DumpHandler::onRequest(std::unique_ptr<proxygen::HTTPMessage> request) noexcept {
     // POST requests only, and guid query parameter required
@@ -23,7 +23,7 @@ void DumpHandler::onRequest(std::unique_ptr<proxygen::HTTPMessage> request) noex
     }
 
     m_guid = request->getQueryParam("guid");
-    m_dumpFile = folly::openNoInt((std::string("/home/luken/src/Gargamelle/build/crash_reports/") + m_guid + ".gz").data(),
+    m_dumpFile = folly::openNoInt((m_dumpPath + m_guid + ".gz").data(),
             O_CREAT | O_TRUNC | O_RDWR);
     if (m_dumpFile < 0) {
         LOG(ERROR) << "failed to open file to write dump!";
@@ -79,10 +79,11 @@ void DumpHandler::writeFile(folly::EventBase* evb) {
 }
 
 // ==== DumpHandlerFactory
+DumpHandlerFactory::DumpHandlerFactory(const std::string& dumpPath): m_dumpPath(dumpPath) {}
 void DumpHandlerFactory::onServerStart(folly::EventBase*) noexcept {}
 void DumpHandlerFactory::onServerStop() noexcept {}
 proxygen::RequestHandler* DumpHandlerFactory::onRequest(proxygen::RequestHandler*, proxygen::HTTPMessage*) noexcept {
-    return new DumpHandler();
+    return new DumpHandler(m_dumpPath);
 }
 
 } // namespace handler

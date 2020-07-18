@@ -4,8 +4,9 @@
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <proxygen/httpserver/HTTPServer.h>
 
-DEFINE_bool(useSSL, true, "Require SSL connections.");
-DEFINE_int32(port, 440, "Which port to bind for incoming HTTP(S) traffic.");
+DEFINE_int32(port, 8080, "Which port to bind for incoming HTTP(S) traffic.");
+DEFINE_string(dumpPath, "", "Root path for saving incoming crash dumps.");
+DEFINE_int32(numThreads, 2, "Number of threads to run on the server.");
 
 int main(int argc, char* argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -13,7 +14,7 @@ int main(int argc, char* argv[]) {
     google::InstallFailureSignalHandler();
 
     auto diskIOThreadPool = std::make_shared<folly::CPUThreadPoolExecutor>(
-            4, std::make_shared<folly::NamedThreadFactory>("StaticDiskIOThread"));
+            FLAGS_numThreads, std::make_shared<folly::NamedThreadFactory>("StaticDiskIOThread"));
     folly::setCPUExecutor(diskIOThreadPool);
 
     std::vector<proxygen::HTTPServer::IPConfig> IPs = {
@@ -21,11 +22,12 @@ int main(int argc, char* argv[]) {
     };
 
     proxygen::HTTPServerOptions options;
-    options.threads = 4;
+    options.threads = FLAGS_numThreads;
     options.idleTimeout = std::chrono::milliseconds(60000);
     options.shutdownOn = {SIGINT, SIGTERM};
     options.enableContentCompression = true;
-    options.handlerFactories = proxygen::RequestHandlerChain().addThen<garg::handler::DumpHandlerFactory>().build();
+    options.handlerFactories = proxygen::RequestHandlerChain().addThen<garg::handler::DumpHandlerFactory>(
+            FLAGS_dumpPath).build();
     options.h2cEnabled = false;
 
     proxygen::HTTPServer server(std::move(options));
