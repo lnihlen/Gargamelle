@@ -4,6 +4,8 @@ include_directories(
 
 add_executable(gargamelle
     gargamelle.cpp
+    DumpHandler.cpp
+    DumpHandler.hpp
 )
 
 target_compile_options(gargamelle PRIVATE
