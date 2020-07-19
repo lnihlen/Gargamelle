@@ -24,7 +24,20 @@ proxygen::RequestHandler* HandlerFactory::onRequest(proxygen::RequestHandler*,
         LOG(ERROR) << "request '" << requestPath.start() << "' didn't match prefix.";
         return new ErrorHandler(404, "Not Found");
     }
-    Paths path = getPath(requestPath.start() + m_apiPrefix.size(), requestPath.size() - m_apiPrefix.size());
+
+    const char* pathStart = requestPath.start() + m_apiPrefix.size();
+    size_t pathLength;
+
+    // Need to discard any query parameters at end of query for string match to work.
+    const char* queryStart = strchr(pathStart, '?');
+    if (queryStart) {
+        pathLength = queryStart - pathStart;
+    } else {
+        pathLength = requestPath.size() - m_apiPrefix.size();
+    }
+
+    Paths path = getPath(pathStart, pathLength);
+
     switch (path) {
     case kDump:
         return new DumpHandler(m_dumpPath);

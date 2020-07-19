@@ -12,6 +12,7 @@ namespace {
 
 %}
 %language=C++
+%compare-strncmp
 %struct-type
 struct PathsPair { const char* name; ggml::handler::Paths path; };
 %%
