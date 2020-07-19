@@ -1,18 +1,33 @@
 include_directories(
     "${INSTALL_EXT}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
 )
+
+find_program(gperf_program gperf)
+if (NOT gperf_program)
+    message(FATAL_ERROR "Could not find gperf")
+endif()
+
+add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Paths.cpp"
+    COMMAND ${gperf_program} --output-file=${CMAKE_CURRENT_BINARY_DIR}/Paths.cpp ${CMAKE_CURRENT_SOURCE_DIR}/Paths.cpp.in
+    MAIN_DEPENDENCY Paths.cpp.in
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    VERBATIM
+)
+
 
 add_executable(gargamelle
-    gargamelle.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/Paths.cpp
     DumpHandler.cpp
     DumpHandler.hpp
-)
-
-target_compile_options(gargamelle PRIVATE
-    -std=c++14
-    -DNDEBUG
-    -Wall
-    -Wextra
+    ErrorHandler.cpp
+    ErrorHandler.hpp
+    HandlerFactory.cpp
+    HandlerFactory.hpp
+    HelloHandler.cpp
+    HelloHandler.hpp
+    Paths.hpp
+    gargamelle.cpp
 )
 
 # NOTE: linking order here is important, including the duplicate inclusions. In particular libproxygenhttpserver needs

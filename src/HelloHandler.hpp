@@ -1,13 +1,13 @@
-#ifndef SRC_DUMP_HANDLER_HPP_
-#define SRC_DUMP_HANDLER_HPP_
+#ifndef SRC_HELLO_HANDLER_HPP_
+#define SRC_HELLO_HANDLER_HPP_
 
 #include <proxygen/httpserver/RequestHandler.h>
 
 namespace ggml { namespace handler {
 
-class DumpHandler : public proxygen::RequestHandler {
+class HelloHandler : public proxygen::RequestHandler {
 public:
-    explicit DumpHandler(const std::string& dumpPath);
+    HelloHandler();
 
     void onRequest(std::unique_ptr<proxygen::HTTPMessage> request) noexcept override;
     void onBody(std::unique_ptr<folly::IOBuf> body) noexcept override;
@@ -15,19 +15,9 @@ public:
     void onUpgrade(proxygen::UpgradeProtocol proto) noexcept override;
     void requestComplete() noexcept override;
     void onError(proxygen::ProxygenError err) noexcept override;
-
-private:
-    void writeFile(folly::EventBase* evb);
-    bool m_valid;
-    std::string m_dumpPath;
-
-    std::string m_guid;
-    int m_dumpFile;
-    std::unique_ptr<folly::IOBuf> m_body;
 };
-
 
 } // namespace handler
 } // namespace ggml
 
-#endif // SRC_DUMP_HANDLER_HPP_
+#endif // SRC_HELLO_HANDLER_HPP_
