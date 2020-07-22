@@ -27,6 +27,8 @@ add_executable(gargamelle
     HelloHandler.cpp
     HelloHandler.hpp
     Paths.hpp
+    SymbolHandler.cpp
+    SymbolHandler.hpp
     gargamelle.cpp
 )
 

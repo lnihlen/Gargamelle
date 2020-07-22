@@ -18,6 +18,7 @@ struct PathsPair { const char* name; ggml::handler::Paths path; };
 %%
 dump,   ggml::handler::Paths::kDump
 hello,  ggml::handler::Paths::kHello
+symbol, ggml::handler::Paths::kSymbol
 %%
 
 } // namespace

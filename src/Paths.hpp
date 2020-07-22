@@ -5,7 +5,7 @@
 
 namespace ggml { namespace handler {
 
-enum Paths { kDump, kHello, kNotFound };
+enum Paths { kDump, kHello, kNotFound, kSymbol };
 
 Paths getPath(const char* path, size_t length);
 

@@ -4,14 +4,17 @@
 #include "ErrorHandler.hpp"
 #include "HelloHandler.hpp"
 #include "Paths.hpp"
+#include "SymbolHandler.hpp"
 
 #include <string.h>
 
 namespace ggml { namespace handler {
 
-HandlerFactory::HandlerFactory(const std::string& apiPrefix, const std::string& dumpPath):
+HandlerFactory::HandlerFactory(const std::string& apiPrefix, const std::string& dumpPath,
+        const std::string& symbolPath):
     m_apiPrefix(apiPrefix),
-    m_dumpPath(dumpPath) {}
+    m_dumpPath(dumpPath),
+    m_symbolPath(symbolPath) {}
 
 void HandlerFactory::onServerStart(folly::EventBase*) noexcept {}
 
@@ -48,6 +51,9 @@ proxygen::RequestHandler* HandlerFactory::onRequest(proxygen::RequestHandler*,
     case kNotFound:
         LOG(ERROR) << "request '" << requestPath.start() << "' not found.";
         return new ErrorHandler(404, "Not Found");
+
+    case kSymbol:
+        return new SymbolHandler(m_symbolPath);
     }
 
     LOG(ERROR) << "at bottom of HandlerFactory.";
