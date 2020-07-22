@@ -1,5 +1,6 @@
 #include "DumpHandler.hpp"
 
+#include <fmt/core.h>
 #include <folly/FileUtil.h>
 #include <folly/Memory.h>
 #include <folly/executors/GlobalExecutor.h>
@@ -21,7 +22,12 @@ void DumpHandler::onRequest(std::unique_ptr<proxygen::HTTPMessage> request) noex
     }
 
     m_guid = request->getQueryParam("guid");
-    m_dumpFile = folly::openNoInt((m_dumpPath + m_guid + ".gz").data(), O_CREAT | O_TRUNC | O_RDWR);
+
+    auto now = std::chrono::system_clock::now().time_since_epoch();
+    std::string filePath = fmt::format("{}{:016x}_{}.gz", m_dumpPath,
+            std::chrono::duration_cast<std::chrono::milliseconds>(now).count(), m_guid);
+
+    m_dumpFile = folly::openNoInt(filePath.data(), O_CREAT | O_TRUNC | O_RDWR);
     if (m_dumpFile < 0) {
         LOG(ERROR) << "failed to open file to write dump!";
         return;
